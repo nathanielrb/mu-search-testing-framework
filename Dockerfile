@@ -1,7 +1,7 @@
-FROM semtech/mu-javascript-template
+FROM mu-javascript-template-with-docker
 LABEL maintainer="nathaniel.rudavsky@gmail.com"
 
-RUN apk add docker
+# RUN apk add docker
 
 # RUN apk add py-pip
 # RUN apk update

@@ -13,4 +13,8 @@ LABEL maintainer="nathaniel.rudavsky@gmail.com"
 
 ENV MU_SEARCH_ENDPOINT 'http://musearch'
 
+ENV MU_RESOURCE_ENDPOINT 'http://resource'
+
 ENV VIRTUOSO_DATA_DIRECTORY '/data'
+
+ENV ELASTICSEARCH_DATA_DIRECTORY 'data/elasticsearch'

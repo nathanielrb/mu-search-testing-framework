@@ -5,7 +5,7 @@ const fs = require("fs");
 var path = require('path');
 const util = require('util')
 const exec = util.promisify(require('child_process').exec);
-const utils = require('/app/functions.js')
+const utils = require('/app/utils.js')
 
 function command(cmd) {
     return exec(cmd)
@@ -116,7 +116,7 @@ command('cd /dkr')
 // run tests
 .then( () => { 
     testrunner.run({
-        code: '/app/functions.js', 
+        code: '/app/utils.js', 
         tests: '/config/tests.js'
     }, (err, report) => {
         console.log(report);

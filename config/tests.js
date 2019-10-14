@@ -18,11 +18,11 @@ test("A basic test example", assert => {
 });
 
 // query mu-search
-test("count musearch results", assert => {
+test("count musearch Turtle Soup Results", assert => {
     assert.expect(1);
-    return queryMusearch('/cases/search?filter[title,data,subcaseTitle,subcaseSubTitle]=test', [groups.read])
+    return queryMusearch('/cases/search?filter[title]=Turtle+Soup', [groups.read])
         .then( results => {
-            assert.equal(9, results['count']);
+            assert.equal(1, results['count']);
         })
 });
 

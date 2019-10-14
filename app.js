@@ -7,17 +7,19 @@ const util = require('util')
 const exec = util.promisify(require('child_process').exec);
 const utils = require('/app/utils.js')
 
-function command(cmd) {
-    return exec(cmd)
+function drc(cmd) {
+    return exec('cd /dkr && docker-compose --project-name ' + process.env.PROJECT_NAME + ' ' + cmd)
     .then( response => {
-        console.log('Shell command: ' + JSON.stringify(response));
+        console.log(response.stdout);
+        console.log(response.stderr);
+        return Promise.resolve();
     });
 }
 
 function queryVirtuoso( q ) {
     return query( q )
         .then( response => {
-            // console.log('Virtuoso: ' +  JSON.stringify(response ));
+            return Promise.resolve();
         })
         .catch( err => {
             console.log( "Oops, something went wrong with this Virtuoso query: " + ( err ) );
@@ -31,38 +33,33 @@ function retry(label, interval, callback){
             return Promise.resolve() 
         })
         .catch( err => { 
-            console.log('Waiting for ' + label);
-            console.log(JSON.stringify(err));
-            return utils.sleeper(interval).then( () => { return retry(label, interval, callback) } );
+            console.log('Waiting for ' + label + '...');
+            return utils.sleeper(interval)().then( () => { return retry(label, interval, callback) } );
         });
 }
 
-// Startup
-
-console.log("Welcome to the mu-search testing framework")
-
-console.log('=== Warning ===\nThis will run queries on the triplestore and delete containers.\nYou have 3 seconds to press ctrl+c ctrl+c\n===============')
-
-setTimeout( () => {}, 3000)
-
-// Put Quads data in Virtuoso toLoad directory
+// Copy  Quads data in Virtuoso toLoad directory
 // The /data directory used by Virtuoso must be shared
-// TODO This has an obvious problem, when naming overlaps
+// TODO This has an obvious problem, when naming overlaps.
+// A better solution would be to run Virtuoso with an
+// overridden shared volume, but this opens the can of 
+// networking worms...
 function copyLoadFiles() {
     if (fs.existsSync('/config/toLoad') && fs.existsSync(process.env.VIRTUOSO_DATA_DIRECTORY)){
-        var loadDir = process.env.VIRTUOSO_DATA_DIRECTORY + '/toLoad';
+        var toLoadDir = process.env.VIRTUOSO_DATA_DIRECTORY + '/toLoad';
+        var sourceDir = '/config/toLoad'
 
-        if (!fs.existsSync(loadDir)){
-            console.log("Creating directory: " + loadDir)
-            fs.mkdirSync(loadDir);
+        if (!fs.existsSync(toLoadDir)){
+            console.log("Creating directory: " + toLoadDir)
+            fs.mkdirSync(toLoadDir);
         }
 
-        var files = fs.readdirSync('/config/toLoad');
+        var files = fs.readdirSync(sourceDir);
         files.forEach( file => { 
-            console.log( "Copying file: " + file + ' to ' + loadDir);
-            var source = path.join(loadDir, path.basename(file));
-            var destination = fs.readFileSync(path.join('/config/toLoad', file));
-            fs.writeFileSync(source, destination);
+            console.log( "Copying file: " + file + ' to ' + toLoadDir);
+            var source = fs.readFileSync(path.join(sourceDir, file));
+            var destination = path.join(toLoadDir, file); //
+            fs.writeFileSync(destination, source);
         }); 
      }
 
@@ -70,15 +67,14 @@ function copyLoadFiles() {
 }
 
 // Cleans up any copied files from /toLoad directory
-// TODO This has an obvious problem, when naming overlaps
 function cleanLoadFiles() {
     if (fs.existsSync('/config/toLoad') && fs.existsSync(process.env.VIRTUOSO_DATA_DIRECTORY)){
-        var loadDir = process.env.VIRTUOSO_DATA_DIRECTORY + '/toLoad';
+        var toLoadDir = process.env.VIRTUOSO_DATA_DIRECTORY + '/toLoad';
 
         var files = fs.readdirSync('/config/toLoad');
         files.forEach( file => { 
-            var filepath = path.join('/config/toLoad', file);
-            console.log( "Removing file: " + filepath);
+            var filepath = path.join(toLoadDir, file);
+            console.log( "Removing file: " + file);
             fs.unlinkSync(filepath);
         }); 
      }
@@ -86,19 +82,40 @@ function cleanLoadFiles() {
     return Promise.resolve();
 }
 
-command('cd /dkr')
 
-// delete docker images
-// .then( () => { return command('docker-compose rm -fs elasticsearch musearch kibana') })
+// Startup
+
+console.log("Welcome to the mu-search testing framework")
+
+console.log('=== Warning ===\nThis will run queries on the triplestore and delete containers.\nYou have 3 seconds to press ctrl+c ctrl+c\n===============')
+
+setTimeout( () => {}, 3000);
+
+// do we need to share a network here?
+
+// remove docker images
+drc('kill elasticsearch musearch kibana database')
+.then( () => { return drc('rm -fs elasticsearch musearch kibana database') })
+// .then () => { return exec('docker ps | grep ' + process.env.PROJECT_NAME + " | awk '{print $1}' | xargs docker rm") }) // why is this necessary?
 
 // remove elasticsearch data
-// .then( () => { return  command('sudo rm -rf ' + process.env.ELASTICSEARCH_DATA_DIRECTORY) })
+// .then( () => { return  exec('rm -rf ' + process.env.ELASTICSEARCH_DATA_DIRECTORY) })
 
 // copy Virtuoso toLoad data
+exec('rm -rf ' + process.env.ELASTICSEARCH_DATA_DIRECTORY)
 .then( () => { return copyLoadFiles();  })
+.then( () => { return exec('ls /data/db/toLoad'); })
 
-// bring up docker images
-// command('docker-compose up -d --remove-orphans')
+// bring up Virtuoso
+.then( () => { return drc('up -d database') })
+// .then( () => { console.log("going"); return drc('run -d --name kaleidos-project_database_1 -p 127.0.0.1:8890:8890 -v /data/kaleidos-project/data/db:/data database') })
+
+// bring up Elasticsearch
+.then( () => { return drc('up -d elasticsearch') })
+
+// bring up mu-search
+.then( () => { return drc('up -d musearch') })
+// .then( () => { return drc("run -d -v /dkr/config/elastic:/config -p 127.0.0.1:9201:80 --link dkr_elasticsearch_1:elasticsearch musearch") })
 
 // wait for Virtuoso
 .then( () => { return retry('virtuoso', 500, () => { return queryVirtuoso(' ASK { ?s ?p ?o }') }) })
@@ -111,7 +128,7 @@ command('cd /dkr')
 .then( () => { return queryVirtuoso(' SELECT * WHERE { GRAPH <http://mu.semte.ch/authorization> { ?s ?p ?o } }') })
 
 // wait for musearch
-.then( () => { return retry('musearch', 5000, () => { return utils.musearchHealth('_all') }) })
+.then( () => { return retry('musearch', 5000, () => { return utils.musearch('GET','/health') }) }) //utils.musearchHealth('_all') }) })
 
 // run tests
 .then( () => { 
@@ -125,12 +142,3 @@ command('cd /dkr')
 
 // exit
 // .then( () => { process.exit(); });
-
-
-// command("docker-compose exec -T virtuoso isql-v <<EOF
-// SPARQL DELETE WHERE {   GRAPH <http://mu.semte.ch/authorization> {     ?s ?p ?o.   } };
-// exec('checkpoint');
-// exit;
-// EOF")
-
-

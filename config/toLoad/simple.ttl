@@ -1,0 +1,11 @@
+<zeroth0> a <http://dbpedia.org/ontology/BigCase>.
+
+<firstcase1> a <http://dbpedia.org/ontology/BigCase>;
+            <http://mu.semte.ch/vocabularies/core/uuid> "firstcase";
+            <http://purl.org/dc/terms/title> "Turtle Soup".
+
+<secondcase2> a <http://dbpedia.org/ontology/BigCase>;
+            <http://mu.semte.ch/vocabularies/core/uuid> "secondcase";
+            <http://purl.org/dc/terms/title> "Pigeon Pie".
+
+ 

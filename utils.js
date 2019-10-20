@@ -1,4 +1,5 @@
 const request = require('request-promise-native');
+const fs = require('fs');
 
 function sleeper(ms) {
   return function(x) {
@@ -53,6 +54,21 @@ function musearchHealth(type){
     return musearch('GET','/' + type + '/health');
 }
 
+
+function rmdirRecursive(path){
+    if( fs.existsSync(path) ) {
+        fs.readdirSync(path).forEach(function(file,index){
+            var curPath = path + "/" + file;
+            if(fs.lstatSync(curPath).isDirectory()) { // recurse
+                rmdirRecursive(curPath);
+            } else { // delete file
+                fs.unlinkSync(curPath);
+            }
+        });
+        fs.rmdirSync(path);
+    }
+}
+
 //==-- exports --==//
 const exports =  {
     muresource: muresource,
@@ -61,7 +77,8 @@ const exports =  {
     deleteMusearchIndex: deleteMusearchIndex,
     reindexMusearch: reindexMusearch,
     musearchHealth: musearchHealth,
-    sleeper: sleeper
+    sleeper: sleeper,
+    rmdirRecursive: rmdirRecursive
 }
 export default exports;
 
@@ -72,6 +89,7 @@ export {
     deleteMusearchIndex,
     reindexMusearch,
     musearchHealth,
-    sleeper
+    sleeper,
+    rmdirRecursive
 };
 

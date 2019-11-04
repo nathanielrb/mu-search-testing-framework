@@ -79,8 +79,8 @@ if (fs.existsSync(sourceDir)){
 drc('kill elasticsearch musearch kibana database database-with-auth deltanotifier resource')
 .then( () => { return drc('rm -fs elasticsearch musearch kibana database') })
 
-// Remove elasticsearch data
-.then( () => { return exec('rm -rf ' + process.env.DATA_DIRECTORY + '/elasticsearch') })
+// Remove data
+.then( () => { return exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*') })
 
 // Bring up Virtuoso
 .then( () => { return dr('kill database || true'); })
@@ -90,7 +90,10 @@ drc('kill elasticsearch musearch kibana database database-with-auth deltanotifie
 })
 
 // Bring up Elasticsearch
- .then( () => { return drc('up -d --no-deps elasticsearch') })
+// .then( () => { return drc('up -d --no-deps elasticsearch') })
+.then( () => { 
+    return drc('run -d --no-deps --name elasticsearch -v ' + process.env.DATA_DIRECTORY + '/elasticsearch:/usr/share/elasticsearch/data elasticsearch') 
+})
 
 // Bring up Resources and Deltas
 .then( () => { return drc('up -d --no-deps database-with-auth deltanotifier resource') })

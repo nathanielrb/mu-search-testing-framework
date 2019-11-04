@@ -1,13 +1,20 @@
 # mu-search Testing Framework
 
+## Overview
+
+The mu-search testing framework allows mu-search to be tested *in situ* with arbitrary triples data, and tests using the QUnit javascript unit test suite. It can be added to an existing project.
+
 ## Setup
 
-Because this application needs to run Docker and Docker Compose from within its container, a few additional shared volumes are necessary:
-- The Docker socket needs to be exposed
-- The project directory (where the `docker-compose.yml` file is located) needs to be shared as `/dkr` 
+Because this application runs Docker and Docker Compose from within its container, a few additional shared volumes are necessary:
+
+- the Docker socket needs to be exposed
+- the project directory (where the `docker-compose.yml` file is located) needs to be shared as `/dkr` 
 - an empty data folder must be created and shared as `/data`
 
 The project name (directory) must also be specified, to ensure correct naming and networking.
+
+Finally, the absolute path to the data directory needs to be specified.
 
 ```
   musearchtest:
@@ -21,6 +28,7 @@ The project name (directory) must also be specified, to ensure correct naming an
     environment:
       NODE_ENV: development
       PROJECT_NAME: kaleidos-project
+      DATA_DIRECTORY: /data/kaleidos-project/data/testing
     tty: true
 ```
 
@@ -32,9 +40,6 @@ Several standard service names are currently hard-coded.
 ## Running
 
 ```
-# clean-up from previous runs
-rm -rf data/testing/db/.d* data/testing/db/virtuoso.* data/testing/db/dumps
-
 drc up --no-deps musearchtest
 ```
 
@@ -42,13 +47,16 @@ drc up --no-deps musearchtest
 
 ## Configuration
 
+Configuration of the testing framework involves including (optional) triple data to be loaded by Virtuoso, and the defining of tests via the `tests.js` file in the config directory.
+
+
 ### Loading Triple data into Virtuoso
 
-If `./config/mu-search-testing-framework` is the shared config directory, any triple data in `./config/mu-search-testing-framework/toLoad` will be loaded by Virtuoso in the testing environment.
+If `./config/testing` is the shared config directory, any triple data in `./config/testing/toLoad` will be loaded by Virtuoso in the testing environment.
 
 ### Writing Tests
 
-Tests are written using the QUnit framework.
+Tests are written using the QUnit framework, and must be defined in the file `./config/testing/tests.js`.
 
 Authorization groups are defined as JSON objects:
 

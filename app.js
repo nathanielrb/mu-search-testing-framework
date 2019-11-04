@@ -32,20 +32,20 @@ function queryVirtuoso( q ) {
         .then( response => {
             return Promise.resolve();
         })
-        .catch( err => {
-            console.log( "Oops, something went wrong with this Virtuoso query: " + ( err ) );
-        });
 }
 
-function retry(label, interval, callback){
+function retry(label, interval, callback, repeat){
     return callback()
-        .then( () => { 
+        .then( result => { 
             console.log(label + ' is up'); 
             return Promise.resolve() 
         })
         .catch( err => { 
-            console.log('Waiting for ' + label + '...');
-            return utils.sleeper(interval)().then( () => { return retry(label, interval, callback) } );
+            if(repeat)
+                console.log('...');
+            else
+                console.log('Waiting for ' + label + '...');
+            return utils.sleeper(interval)().then( () => { return retry(label, interval, callback, true) } );
         });
 }
 
@@ -62,26 +62,12 @@ setTimeout( () => {}, 3000);
 var sourceDir = '/config/toLoad';
 if (fs.existsSync(sourceDir)){
     utils.rmdirRecursive('/data/db');
-//    if (!fs.existsSync('/data/db')){
-        fs.mkdirSync('/data/db');
-  //  }
-
-    //if (!fs.existsSync('/data/db/toLoad')){
-        fs.mkdirSync('/data/db/toLoad');
-//    }
-
-    // var files = fs.readdirSync('/data/db/virtuoso*');
-    // files.forEach( file => { 
-    //     fs.unlinkSync(path.join('/data/db', file));
-    // }); 
-
-    // fs.unlinkSync('/data/db/.data-loaded');
-    // fs.unlinkSync('/data/db/.dba_pwd_set');
-
+    
+    fs.mkdirSync('/data/db');
+    fs.mkdirSync('/data/db/toLoad');
 
     var files = fs.readdirSync(sourceDir);
     files.forEach( file => { 
-        console.log( "Copying file: " + file);
         var source = fs.readFileSync(path.join(sourceDir, file));
         var destination = path.join('/data/db/toLoad', file); //
         fs.writeFileSync(destination, source);
@@ -90,34 +76,38 @@ if (fs.existsSync(sourceDir)){
 
 
 // Remove docker images
-drc('kill elasticsearch musearch kibana database')
+drc('kill elasticsearch musearch kibana database database-with-auth deltanotifier resource')
 .then( () => { return drc('rm -fs elasticsearch musearch kibana database') })
-.then( () => { return dr('kill database || true'); })
-.then( () => { return dr('rm database || true'); })
 
 // Remove elasticsearch data
 .then( () => { return exec('rm -rf ' + process.env.DATA_DIRECTORY + '/elasticsearch') })
 
 // Bring up Virtuoso
-//    .then( () => { return drc('up -d database') })
-.then( () => { return drc('run -d --no-deps --name database -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data database') })
+.then( () => { return dr('kill database || true'); })
+.then( () => { return dr('rm database || true'); })
+.then( () => { 
+    return drc('run -d --no-deps --name database -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data database') 
+})
 
 // Bring up Elasticsearch
  .then( () => { return drc('up -d --no-deps elasticsearch') })
 
+// Bring up Resources and Deltas
+.then( () => { return drc('up -d --no-deps database-with-auth deltanotifier resource') })
+
 // Bring up mu-search
  .then( () => { return drc('up -d --no-deps musearch') })
-// .then( () => { return drc("run --name musearch -d -v /dkr/config/elastic:/config -p 127.0.0.1:9201:80 --link jelly_database:database musearch") })
+
 
 // Wait for Virtuoso
-.then( () => { return retry('virtuoso', 500, () => { return queryVirtuoso(' ASK { ?s ?p ?o }') }) })
+.then( () => { return retry('virtuoso', 500, () => { return query(' SELECT ?s WHERE { ?s ?p ?o } LIMIT 1') }) })
+
 
 // Clear Virtuoso
-// TODO make this DELETE WHERE :-)
-.then( () => { return queryVirtuoso(' SELECT * WHERE { GRAPH <http://mu.semte.ch/authorization> { ?s ?p ?o } }') })
+.then( () => { return query(' DELETE WHERE { GRAPH <http://mu.semte.ch/authorization> { ?s ?p ?o } }') })
 
 // Wait for musearch
-.then( () => { return retry('musearch', 5000, () => { return utils.musearch('GET','/health') }) }) //utils.musearchHealth('_all') }) })
+.then( () => { return retry('musearch', 5000, () => { return utils.musearch('GET','/health') }) })
 
 // Run tests
 .then( () => { 
@@ -129,7 +119,7 @@ drc('kill elasticsearch musearch kibana database')
     });
 })
 .then( () => {
-    dr('kill database');
+//    dr('kill database');
 })
 // exit
 // .then( () => { process.exit(); });

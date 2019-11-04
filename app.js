@@ -10,7 +10,7 @@ const utils = require('/app/utils.js')
 // process.env.MU_SPARQL_ENDPOINT = 'http://virtuoso:8890/sparql' 
 
 function drc(cmd) {
-    return exec('cd /kaleidos-project && docker-compose --project-name ' + process.env.PROJECT_NAME + ' ' + cmd)
+    return exec('cd /dkr && docker-compose --project-name ' + process.env.PROJECT_NAME + ' ' + cmd)
     .then( response => {
         console.log(response.stdout);
         console.log(response.stderr);

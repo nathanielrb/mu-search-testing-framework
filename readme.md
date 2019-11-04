@@ -7,6 +7,7 @@ Because this application needs to run Docker and Docker Compose from within its 
 - The project directory (where the `docker-compose.yml` file is located) needs to be shared as `/dkr` 
 - an empty data folder must be created and shared as `/data`
 
+The project name (directory) must also be specified, to ensure correct naming and networking.
 
 ```
   musearchtest:
@@ -19,6 +20,7 @@ Because this application needs to run Docker and Docker Compose from within its 
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       NODE_ENV: development
+      PROJECT_NAME: kaleidos-project
     tty: true
 ```
 

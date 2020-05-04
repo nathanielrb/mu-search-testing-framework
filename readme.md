@@ -4,6 +4,7 @@
 
 The mu-search testing framework allows mu-search to be tested *in situ* with arbitrary triples data, and tests using the QUnit javascript unit test suite. It can be added to an existing project.
 
+
 ## Setup
 
 Because this application runs Docker and Docker Compose from within its container, a few additional shared volumes are necessary:
@@ -27,32 +28,61 @@ Finally, the absolute path to the data directory needs to be specified.
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       NODE_ENV: development
-      PROJECT_NAME: kaleidos-project
-      DATA_DIRECTORY: /data/kaleidos-project/data/testing
+      PROJECT_NAME: my-project
+      DATA_DIRECTORY: /data/my-project/data/testing
     tty: true
 ```
 
 ### Naming
 
-Several standard service names are currently hard-coded.
+By default, the Elasticsearch service is called `elasticsearch`, and Virtuoso `database`. These can be parameterized:
+
+```
+    environment:
+      ELASTIC_SERVICE: elasticsearch2
+      DATABASE_SERVICE: mydatabase
+```
 
 
 ## Running
 
+The mu-search testing framework runs two services from within its container, Elasticsearch and Virtuoso. All other services necessary for testing should be brought up first, without dependencies:
+
 ```
-drc up --no-deps musearchtest
+# drc up --no-deps -d resource deltanotifier musearch
+```
+
+Then bring up mu-search-test
+
+```
+# drc up musearchtest
+```
+
+### Shutting Down
+
+If mu-search-test is shut down prematurely, it may leave two containers running with unconventional names (`database` instead of `my-project_database_75751dd7f14f`, etc.):
+
+```
+# drc ps
+Name            Command           State                 Ports               
+------------------------------------------------------------------------------
+database        /bin/bash /virtuoso.sh           Up      1111/tcp, 127.0.0.1:8890->8890/tcp
+elasticsearch   /usr/local/bin/docker-entr ...   Up      9200/tcp, 9300/tcp                
+```
+
+These need to be killed directly through Docker:
+
+```
+# docker kill database elasticsearch
 ```
 
 
 
 ## Configuration
 
-Configuration of the testing framework involves including (optional) triple data to be loaded by Virtuoso, and the defining of tests via the `tests.js` file in the config directory.
-
-
 ### Loading Triple data into Virtuoso
 
-If `./config/testing` is the shared config directory, any triple data in `./config/testing/toLoad` will be loaded by Virtuoso in the testing environment.
+If `./config/testing` is the shared config directory, then any triple data in `./config/testing/toLoad` will be loaded by Virtuoso in the testing environment.
 
 ### Writing Tests
 
@@ -109,5 +139,7 @@ test("Add data, check if updates applied", assert => {
 });
 ```
 
-Note that this example currently does *not* work, due to networking issues between mu-cl-resources and database-with-auth.
+Note that this example currently will only work if delta notifications to mu-search are correctly configured.
+
+
 

@@ -9,7 +9,7 @@ var groups = {
     'clean' : {"name" : "clean", "variables": []}
 }
 
-console.log("Welcome to the tests");
+console.log("Welcome to the sample tests.");
 
 test("A basic test example", assert => {
     assert.ok(true, "this test is fine");
@@ -18,6 +18,7 @@ test("A basic test example", assert => {
 });
 
 // Query mu-search
+
 test("count musearch Turtle Soup Results", assert => {
     assert.expect(1);
     return queryMusearch('/cases/search?filter[title]=Chicken+Stew', [groups.read])
@@ -26,9 +27,8 @@ test("count musearch Turtle Soup Results", assert => {
         })
 });
 
-
 // Run resources request then query mu-search to see if Deltas were ingested
-// This won't work until we resolve drc networking issues (resources isn't talking to database-with-auth)
+// This will only work if delta updates are sent to musearch. 
 
 var newcase = {
     data: {
@@ -42,14 +42,13 @@ var newcase = {
 test("Add data, check if updates applied", assert => {
     assert.expect(1);
     return muresource('POST', '/cases', [groups.admin], newcase)
-	.then( (res) => { console.log("RECEIVED: %j",res ) })
+	.then( (res) => { console.log("Received from resources: %j", res) })
     .then(sleeper(2000))
     .then( () => { 
         return queryMusearch('/cases/search?filter[title]=gerrymandered', [groups.admin]) 
     })
         .then( results => {
-            console.log("GOT: %j", results);
             assert.equal(1, results['count']);
         })
-    .catch( err => { console.log("ERR: " + JSON.stringify(err)); })
+    .catch( err => { console.log("Error on resources Update: " + JSON.stringify(err)); })
 });

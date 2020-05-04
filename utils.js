@@ -18,7 +18,7 @@ function muresource(method, path, groups, body) {
         },
         json: true
     }
-
+    console.log("Resources received: %j", body);
     if (body) options.body = body
 
     return request(options)

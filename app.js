@@ -9,8 +9,14 @@ const utils = require('/app/utils.js')
 
 // process.env.MU_SPARQL_ENDPOINT = 'http://virtuoso:8890/sparql' 
 
-function drc(cmd) {
-    return exec('cd /dkr && docker-compose --project-name ' + process.env.PROJECT_NAME + ' ' + cmd)
+const database = process.env.DATABASE_SERVICE || 'database';
+const elasticsearch = process.env.ELASTICSEARCH_SERVICE || 'elasticsearch';
+
+function drc(cmd, failsafe) {
+    var command = 'cd /dkr && docker-compose --project-name ' + process.env.PROJECT_NAME + ' ' + cmd
+    if(failsafe)
+        command += ' || true'
+    return exec(command)
     .then( response => {
         console.log(response.stdout);
         console.log(response.stderr);
@@ -18,8 +24,11 @@ function drc(cmd) {
     });
 }
 
-function dr(cmd) {
-    return exec('docker ' + cmd)
+function dr(cmd, failsafe) {
+    var command = 'docker ' + cmd;
+    if(failsafe)
+        command += ' || true'
+    return exec(command)
     .then( response => {
         console.log(response.stdout);
         console.log(response.stderr);
@@ -42,13 +51,13 @@ function retry(label, interval, callback, repeat){
         })
         .catch( err => { 
             if(repeat)
-                console.log('...');
-            else
+                console.log('Still waiting for ' + label + '...');  
+            else 
                 console.log('Waiting for ' + label + '...');
             return utils.sleeper(interval)().then( () => { return retry(label, interval, callback, true) } );
         });
 }
-
+ 
 
 // Startup
 console.log("Welcome to the mu-search testing framework")
@@ -76,53 +85,42 @@ if (fs.existsSync(sourceDir)){
 
 
 // Remove docker images
-drc('kill elasticsearch musearch kibana database database-with-auth deltanotifier resource')
-.then( () => { return drc('rm -fs elasticsearch musearch kibana database') })
+console.log('Killing database and elasticsearch (if they exist)');
+drc('kill ' + database + ' ' + elasticsearch, true)
+.then( () => { return drc('rm -fs ' +  database + ' '  + elasticsearch, true) })
+.then( () => { return dr('kill database elasticsearch', true); })
 
 // Remove data
 .then( () => { return exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*') })
 
 // Bring up Virtuoso
-.then( () => { return dr('kill database || true'); })
-.then( () => { return dr('rm database || true'); })
 .then( () => { 
-    return drc('run -d --no-deps --name database -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data database') 
+    return drc('run -d --no-deps --name ' + database + ' -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data ' + database) 
 })
 
 // Bring up Elasticsearch
-// .then( () => { return drc('up -d --no-deps elasticsearch') })
 .then( () => { 
-    return drc('run -d --no-deps --name elasticsearch -v ' + process.env.DATA_DIRECTORY + '/elasticsearch:/usr/share/elasticsearch/data elasticsearch') 
+    return drc('run -d --no-deps --name ' + elasticsearch + ' -v ' + process.env.DATA_DIRECTORY + '/elasticsearch:/usr/share/elasticsearch/data ' + elasticsearch) 
 })
 
-// Bring up Resources and Deltas
-.then( () => { return drc('up -d --no-deps database-with-auth deltanotifier resource') })
-
-// Bring up mu-search
- .then( () => { return drc('up -d --no-deps musearch') })
-
-
 // Wait for Virtuoso
-.then( () => { return retry('virtuoso', 500, () => { return query(' SELECT ?s WHERE { ?s ?p ?o } LIMIT 1') }) })
-
+.then( () => { return retry('virtuoso', 3000, () => { return query(' SELECT ?s WHERE { ?s ?p ?o } LIMIT 1') }) })
 
 // Clear Virtuoso
 .then( () => { return query(' DELETE WHERE { GRAPH <http://mu.semte.ch/authorization> { ?s ?p ?o } }') })
 
 // Wait for musearch
-.then( () => { return retry('musearch', 5000, () => { return utils.musearch('GET','/health') }) })
+.then( () => { return retry('musearch', 3000, () => { return utils.musearch('GET','/health') }) })
 
 // Run tests
 .then( () => { 
-    testrunner.run({
+   return testrunner.run({
         code: '/app/utils.js', 
         tests: '/config/tests.js'
     }, (err, report) => {
         console.log(report);
+        console.log("Tests complete.");
+        dr('kill database elasticsearch'); 
+        drc('kill'); // murder-suicide
     });
 })
-.then( () => {
-//    dr('kill database');
-})
-// exit
-// .then( () => { process.exit(); });

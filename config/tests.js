@@ -20,7 +20,7 @@ test("A basic test example", assert => {
 // Query mu-search
 test("count musearch Turtle Soup Results", assert => {
     assert.expect(1);
-    return queryMusearch('/cases/search?filter[title]=Turtle+Soup', [groups.read])
+    return queryMusearch('/cases/search?filter[title]=Chicken+Stew', [groups.read])
         .then( results => {
             assert.equal(results['count'], 1);
         })
@@ -29,25 +29,27 @@ test("count musearch Turtle Soup Results", assert => {
 
 // Run resources request then query mu-search to see if Deltas were ingested
 // This won't work until we resolve drc networking issues (resources isn't talking to database-with-auth)
-//
-// var newcase = {
-//     data: {
-//         type: 'cases',
-//         attributes: {
-//             title: 'A Gerrymandered Case'
-//         }
-//     }
-// }
 
-// test("Add data, check if updates applied", assert => {
-//     assert.expect(1);
-//     return muresource('POST', '/cases', [groups.admin], newcase)
-//     .then(sleeper(2000))
-//     .then( () => { 
-//         return queryMusearch('/cases/search?filter[title]=gerrymandered', [groups.admin]) 
-//     })
-//         .then( results => {
-//             assert.equal(1, results['count']);
-//         })
-//     .catch( err => { console.log("ERR: " + JSON.stringify(err)); })
-// });
+var newcase = {
+    data: {
+        type: 'cases',
+        attributes: {
+            title: 'A Gerrymandered Case'
+        }
+    }
+}
+
+test("Add data, check if updates applied", assert => {
+    assert.expect(1);
+    return muresource('POST', '/cases', [groups.admin], newcase)
+	.then( (res) => { console.log("RECEIVED: %j",res ) })
+    .then(sleeper(2000))
+    .then( () => { 
+        return queryMusearch('/cases/search?filter[title]=gerrymandered', [groups.admin]) 
+    })
+        .then( results => {
+            console.log("GOT: %j", results);
+            assert.equal(1, results['count']);
+        })
+    .catch( err => { console.log("ERR: " + JSON.stringify(err)); })
+});

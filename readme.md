@@ -35,13 +35,15 @@ Finally, the absolute path to the data directory needs to be specified.
 
 ### Naming
 
-By default, the Elasticsearch service is called `elasticsearch`, and Virtuoso `database`. These can be parameterized:
+By default, Elasticsearch service is called `elasticsearch`, and Virtuoso `database`. These can be parameterized:
 
 ```
     environment:
       ELASTIC_SERVICE: elasticsearch2
       DATABASE_SERVICE: mydatabase
 ```
+
+The endpoints `MU_SEARCH_ENDPOINT` and `MU_RESOURCE_ENDPOINT` can also be parameterized as needed.
 
 
 ## Running

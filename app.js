@@ -7,11 +7,6 @@ const util = require('util')
 const exec = util.promisify(require('child_process').exec);
 const utils = require('/app/utils.js')
 
-// process.env.MU_SPARQL_ENDPOINT = 'http://virtuoso:8890/sparql' 
-
-const database = process.env.DATABASE_SERVICE || 'database';
-const elasticsearch = process.env.ELASTICSEARCH_SERVICE || 'elasticsearch';
-
 function drc(cmd, failsafe) {
     var command = 'cd /dkr && docker-compose --project-name ' + process.env.PROJECT_NAME + ' ' + cmd
     if(failsafe)
@@ -86,21 +81,21 @@ if (fs.existsSync(sourceDir)){
 
 // Remove docker images
 console.log('Killing database and elasticsearch (if they exist)');
-drc('kill ' + database + ' ' + elasticsearch, true)
-.then( () => { return drc('rm -fs ' +  database + ' '  + elasticsearch, true) })
-.then( () => { return dr('kill database elasticsearch', true); })
+drc('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE, true)
+.then( () => { return drc('rm -fs ' +  process.env.DATABASE_SERVICE + ' '  + process.env.ELASTIC_SERVICE, true) })
+.then( () => { return dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE, true); })
 
 // Remove data
 .then( () => { return exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*') })
 
 // Bring up Virtuoso
 .then( () => { 
-    return drc('run -d --no-deps --name ' + database + ' -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data ' + database) 
+    return drc('run -d --no-deps --name ' + process.env.DATABASE_SERVICE + ' -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data ' + process.env.DATABASE_SERVICE) 
 })
 
 // Bring up Elasticsearch
 .then( () => { 
-    return drc('run -d --no-deps --name ' + elasticsearch + ' -v ' + process.env.DATA_DIRECTORY + '/elasticsearch:/usr/share/elasticsearch/data ' + elasticsearch) 
+    return drc('run -d --no-deps --name ' + process.env.ELASTIC_SERVICE + ' -v ' + process.env.DATA_DIRECTORY + '/elasticsearch:/usr/share/elasticsearch/data ' + process.env.ELASTIC_SERVICE) 
 })
 
 // Wait for Virtuoso
@@ -120,7 +115,7 @@ drc('kill ' + database + ' ' + elasticsearch, true)
     }, (err, report) => {
         console.log(report);
         console.log("Tests complete.");
-        dr('kill database elasticsearch'); 
+        dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE); 
         drc('kill'); // murder-suicide
     });
 })

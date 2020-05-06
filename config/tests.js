@@ -42,13 +42,9 @@ var newcase = {
 test("Add data, check if updates applied", assert => {
     assert.expect(1);
     return muresource('POST', '/cases', [groups.admin], newcase)
-	.then( (res) => { console.log("Received from resources: %j", res) })
-    .then(sleeper(2000))
-    .then( () => { 
-        return queryMusearch('/cases/search?filter[title]=gerrymandered', [groups.admin]) 
-    })
-        .then( results => {
-            assert.equal(1, results['count']);
-        })
-    .catch( err => { console.log("Error on resources Update: " + JSON.stringify(err)); })
+        .then( (res) => { console.log("Received from resources: %j", res) })
+        .then(sleeper(2000))
+        .then( () => { return queryMusearch('/cases/search?filter[title]=gerrymandered', [groups.admin]) })
+        .then( results => { assert.equal(1, results['count']); })
+        .catch( err => { console.log("Error on resources Update: " + JSON.stringify(err)); })
 });

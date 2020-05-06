@@ -3,9 +3,9 @@ import { app, query, errorHandler } from 'mu';
 var testrunner = require("node-qunit");
 const fs = require("fs");
 var path = require('path');
-const util = require('util')
+const util = require('util');
 const exec = util.promisify(require('child_process').exec);
-const utils = require('/app/utils.js')
+const utils = require('/app/utils.js');
 
 function drc(cmd, failsafe) {
     var command = 'cd /dkr && docker-compose --project-name ' + process.env.PROJECT_NAME + ' ' + cmd
@@ -15,7 +15,6 @@ function drc(cmd, failsafe) {
     .then( response => {
         console.log(response.stdout);
         console.log(response.stderr);
-        return Promise.resolve();
     });
 }
 
@@ -27,22 +26,13 @@ function dr(cmd, failsafe) {
     .then( response => {
         console.log(response.stdout);
         console.log(response.stderr);
-        return Promise.resolve();
     });
-}
-
-function queryVirtuoso( q ) {
-    return query( q )
-        .then( response => {
-            return Promise.resolve();
-        })
 }
 
 function retry(label, interval, callback, repeat){
     return callback()
         .then( result => { 
             console.log(label + ' is up'); 
-            return Promise.resolve() 
         })
         .catch( err => { 
             if(repeat)
@@ -79,43 +69,39 @@ if (fs.existsSync(sourceDir)){
 }
 
 
-// Remove docker images
-console.log('Killing database and elasticsearch (if they exist)');
-drc('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE, true)
-.then( () => { return drc('rm -fs ' +  process.env.DATABASE_SERVICE + ' '  + process.env.ELASTIC_SERVICE, true) })
-.then( () => { return dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE, true); })
+(async () => {
+    // Remove docker images
+    console.log('Killing database and elasticsearch (if they exist)');
+    await drc('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE, true);
+    await drc('rm -fs ' +  process.env.DATABASE_SERVICE + ' '  + process.env.ELASTIC_SERVICE, true);
+    await dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE, true);
 
-// Remove data
-.then( () => { return exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*') })
+    // Remove data
+    await exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*');
 
-// Bring up Virtuoso
-.then( () => { 
-    return drc('run -d --no-deps --name ' + process.env.DATABASE_SERVICE + ' -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data ' + process.env.DATABASE_SERVICE) 
-})
+    // Bring up Virtuoso
+    await drc('run -d --no-deps --name ' + process.env.DATABASE_SERVICE + ' -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data ' + process.env.DATABASE_SERVICE);
 
-// Bring up Elasticsearch
-.then( () => { 
-    return drc('run -d --no-deps --name ' + process.env.ELASTIC_SERVICE + ' -v ' + process.env.DATA_DIRECTORY + '/elasticsearch:/usr/share/elasticsearch/data ' + process.env.ELASTIC_SERVICE) 
-})
+    // Bring up Elasticsearch
+    await drc('run -d --no-deps --name ' + process.env.ELASTIC_SERVICE + ' -v ' + process.env.DATA_DIRECTORY + '/elasticsearch:/usr/share/elasticsearch/data ' + process.env.ELASTIC_SERVICE);
 
-// Wait for Virtuoso
-.then( () => { return retry('virtuoso', 3000, () => { return query(' SELECT ?s WHERE { ?s ?p ?o } LIMIT 1') }) })
+    // Wait for Virtuoso
+    await retry('virtuoso', 3000, () => { return query(' SELECT ?s WHERE { ?s ?p ?o } LIMIT 1') });
 
-// Clear Virtuoso
-.then( () => { return query(' DELETE WHERE { GRAPH <http://mu.semte.ch/authorization> { ?s ?p ?o } }') })
+    // Clear Virtuoso
+    await query(' DELETE WHERE { GRAPH <http://mu.semte.ch/authorization> { ?s ?p ?o } }');
 
-// Wait for musearch
-.then( () => { return retry('musearch', 3000, () => { return utils.musearch('GET','/health') }) })
+    // Wait for musearch
+    await retry('musearch', 3000, () => { return utils.musearch('GET','/health') });
 
-// Run tests
-.then( () => { 
-   return testrunner.run({
-        code: '/app/utils.js', 
-        tests: '/config/tests.js'
-    }, (err, report) => {
-        console.log(report);
-        console.log("Tests complete.");
-        dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE); 
-        drc('kill'); // murder-suicide
-    });
-})
+    // Run tests
+    await testrunner.run({
+                code: '/app/utils.js', 
+                tests: '/config/tests.js'
+            }, (err, report) => {
+                console.log(report);
+                console.log("Tests complete.");
+                dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE); 
+                drc('kill'); // murder-suicide
+            });
+})();

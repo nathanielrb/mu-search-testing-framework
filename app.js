@@ -101,6 +101,7 @@ if (fs.existsSync(sourceDir)){
             }, (err, report) => {
                 console.log(report);
                 console.log("Tests complete.");
+                exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*');
                 dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE); 
                 drc('kill'); // murder-suicide
             });

@@ -76,9 +76,6 @@ if (fs.existsSync(sourceDir)){
     await drc('rm -fs ' +  process.env.DATABASE_SERVICE + ' '  + process.env.ELASTIC_SERVICE, true);
     await dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE, true);
 
-    // Remove data
-    await exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*');
-
     // Bring up Virtuoso
     await drc('run -d --no-deps --name ' + process.env.DATABASE_SERVICE + ' -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data ' + process.env.DATABASE_SERVICE);
 
@@ -101,8 +98,11 @@ if (fs.existsSync(sourceDir)){
             }, (err, report) => {
                 console.log(report);
                 console.log("Tests complete.");
-                exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*');
-                dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE); 
-                drc('kill'); // murder-suicide
+
+                if(!(process.env.DEBUG == "true" || process.env.DEBUG == "True" || process.env.DEBUG == "TRUE")){
+                    exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*');
+                    dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE); 
+                    drc('kill'); // murder-suicide
+                }
             });
 })();

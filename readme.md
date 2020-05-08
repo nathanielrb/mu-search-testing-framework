@@ -23,13 +23,13 @@ Finally, the absolute path to the data directory needs to be specified.
     privileged: true
     volumes:
       - .:/dkr
-      - ./config/mu-search-testing-framework:/config
+      - ./config/testing:/config
       - ./data/testing:/data
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       NODE_ENV: development
       PROJECT_NAME: my-project
-      DATA_DIRECTORY: /data/my-project/data/testing
+      DATA_DIRECTORY: ./data/testing
     tty: true
 ```
 

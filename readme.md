@@ -11,11 +11,11 @@ Because this application runs Docker and Docker Compose from within its containe
 
 - the Docker socket needs to be exposed
 - the project directory (where the `docker-compose.yml` file is located) needs to be shared as `/dkr` 
-- an empty data folder must be created and shared as `/data`
+- an empty data folder must be created and shared as `/data` and specified as a parameter.
 
 The project name (directory) must also be specified, to ensure correct naming and networking.
 
-Finally, the absolute path to the data directory needs to be specified.
+Finally, the absolute path to the data directory needs to be specified as `DATA_DIRECTORY`. This is **important** to prevent the testing instance of the two databases from overwriting production data.
 
 ```
   musearchtest:
@@ -29,9 +29,26 @@ Finally, the absolute path to the data directory needs to be specified.
     environment:
       NODE_ENV: development
       PROJECT_NAME: my-project
-      DATA_DIRECTORY: ./data/testing
+      DATA_DIRECTORY: /data/myproject/data/testing
     tty: true
 ```
+
+### Important note on volumes
+
+The `mu-search-testing-framework` overrides the mounted volumes for the two databases (Elasticsearch and Virtuoso). For unknown reasons, this only works when the overridden volumes are specified as **absolute paths** in the original `docker-compose.yml` file:
+
+```
+  database: 
+    image: tenforce/virtuoso:1.3.2-virtuoso7.2.5.1
+    environment:
+      SPARQL_UPDATE: "true"
+      DEFAULT_GRAPH: "http://mu.semte.ch/application"
+    volumes:
+      - /data/my-project/data/db:/data   # NOT ./data/db:/data
+```
+
+And as mentioned above, the parameter `DATA_DIRECTORY` must also be specified as an absolute path.
+
 
 ### Naming
 
@@ -45,13 +62,21 @@ By default, Elasticsearch service is called `elasticsearch`, and Virtuoso `datab
 
 The endpoints `MU_SEARCH_ENDPOINT` and `MU_RESOURCE_ENDPOINT` can also be parameterized as needed.
 
+### Debug mode
+
+The service can be run in Debug mode, which leaves all services running and ports open for further testing. In this case, manual shutdown and clean-up is required (see [below](#shutting-down)).
+
+```
+    environment:
+      DEBUG: "true"
+```
 
 ## Running
 
 The mu-search testing framework runs two services from within its container, Elasticsearch and Virtuoso. All other services necessary for testing should be brought up first, without dependencies:
 
 ```
-# drc up --no-deps -d resource deltanotifier musearch
+# drc up --no-deps -d resource deltanotifier musearch database-with-auth
 ```
 
 Then bring up mu-search-test
@@ -62,7 +87,7 @@ Then bring up mu-search-test
 
 ### Shutting Down
 
-If mu-search-test is shut down prematurely, it may leave two containers running with unconventional names (`database` instead of `my-project_database_75751dd7f14f`, etc.):
+If mu-search-test is shut down prematurely, or if it is run in debug mode, it may leave two containers running with unconventional names (`database` instead of `my-project_database_75751dd7f14f`, etc.):
 
 ```
 # drc ps

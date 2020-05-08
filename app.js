@@ -61,7 +61,7 @@ setTimeout( () => {}, 3000);
     await dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE, true);
 
     // Remove data
-    await exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*');
+    await exec('rm -rf /data/*');
 
     // Create clean Virtuoso data directory with toLoad files
     var sourceDir = '/config/toLoad';
@@ -102,7 +102,7 @@ setTimeout( () => {}, 3000);
                 console.log("Tests complete.");
 
                 if(!(process.env.DEBUG == "true" || process.env.DEBUG == "True" || process.env.DEBUG == "TRUE")){
-                    exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*');
+                    exec('rm -rf /data/*');
                     dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE); 
                     drc('kill'); // murder-suicide
                 }

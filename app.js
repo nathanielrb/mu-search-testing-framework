@@ -52,22 +52,6 @@ console.log('\n\n====== Warning ======\nThis will run queries on the triplestore
 setTimeout( () => {}, 3000);
 
 
-// Create clean Virtuoso data directory with toLoad files
-var sourceDir = '/config/toLoad';
-if (fs.existsSync(sourceDir)){
-    utils.rmdirRecursive('/data/db');
-    
-    fs.mkdirSync('/data/db');
-    fs.mkdirSync('/data/db/toLoad');
-
-    var files = fs.readdirSync(sourceDir);
-    files.forEach( file => { 
-        var source = fs.readFileSync(path.join(sourceDir, file));
-        var destination = path.join('/data/db/toLoad', file); //
-        fs.writeFileSync(destination, source);
-    }); 
-}
-
 
 (async () => {
     // Remove docker images
@@ -76,11 +60,29 @@ if (fs.existsSync(sourceDir)){
     await drc('rm -fs ' +  process.env.DATABASE_SERVICE + ' '  + process.env.ELASTIC_SERVICE, true);
     await dr('kill ' + process.env.DATABASE_SERVICE + ' ' + process.env.ELASTIC_SERVICE, true);
 
-    // Bring up Virtuoso
-    await drc('run -d --no-deps --name ' + process.env.DATABASE_SERVICE + ' -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data ' + process.env.DATABASE_SERVICE);
+    // Remove data
+    await exec('rm -rf ' + process.env.DATA_DIRECTORY + '/*');
 
+    // Create clean Virtuoso data directory with toLoad files
+    var sourceDir = '/config/toLoad';
+    if (fs.existsSync(sourceDir)){
+        utils.rmdirRecursive('/data/db');
+        
+        fs.mkdirSync('/data/db');
+        fs.mkdirSync('/data/db/toLoad');
+
+        var files = fs.readdirSync(sourceDir);
+        files.forEach( file => { 
+            var source = fs.readFileSync(path.join(sourceDir, file));
+            var destination = path.join('/data/db/toLoad', file); //
+            fs.writeFileSync(destination, source);
+        }); 
+    }
+    // Bring up Virtuoso
+    await drc('run -d --use-aliases --no-deps --name ' + process.env.DATABASE_SERVICE + ' -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data ' + process.env.DATABASE_SERVICE);
+    
     // Bring up Elasticsearch
-    await drc('run -d --no-deps --name ' + process.env.ELASTIC_SERVICE + ' -v ' + process.env.DATA_DIRECTORY + '/elasticsearch:/usr/share/elasticsearch/data ' + process.env.ELASTIC_SERVICE);
+    await drc('run -d --use-aliases --no-deps --name ' + process.env.ELASTIC_SERVICE + ' -p 127.0.0.1:9200:9200 -v ' + process.env.DATA_DIRECTORY + '/elasticsearch:/usr/share/elasticsearch/data ' + process.env.ELASTIC_SERVICE);
 
     // Wait for Virtuoso
     await retry('virtuoso', 3000, () => { return query(' SELECT ?s WHERE { ?s ?p ?o } LIMIT 1') });

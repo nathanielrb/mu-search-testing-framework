@@ -79,10 +79,10 @@ setTimeout( () => {}, 3000);
         }); 
     }
     // Bring up Virtuoso
-    await drc('run -d --use-aliases --no-deps --name ' + process.env.DATABASE_SERVICE + ' -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data ' + process.env.DATABASE_SERVICE);
+    await drc('run --rm -d --use-aliases --no-deps --name ' + process.env.DATABASE_SERVICE + ' -p 127.0.0.1:8890:8890 -v ' + process.env.DATA_DIRECTORY + '/db:/data ' + process.env.DATABASE_SERVICE);
     
     // Bring up Elasticsearch
-    await drc('run -d --use-aliases --no-deps --name ' + process.env.ELASTIC_SERVICE + ' -p 127.0.0.1:9200:9200 -v ' + process.env.DATA_DIRECTORY + '/elasticsearch:/usr/share/elasticsearch/data ' + process.env.ELASTIC_SERVICE);
+    await drc('run --rm -d --use-aliases --no-deps --name ' + process.env.ELASTIC_SERVICE + ' -p 127.0.0.1:9200:9200 -v ' + process.env.DATA_DIRECTORY + '/elasticsearch:/usr/share/elasticsearch/data ' + process.env.ELASTIC_SERVICE);
 
     // Wait for Virtuoso
     await retry('virtuoso', 3000, () => { return query(' SELECT ?s WHERE { ?s ?p ?o } LIMIT 1') });

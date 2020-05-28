@@ -35,7 +35,7 @@ Finally, the absolute path to the data directory needs to be specified as `DATA_
 
 ### Important note on volumes
 
-The `mu-search-testing-framework` overrides the mounted volumes for the two databases (Elasticsearch and Virtuoso). For unknown reasons, this only works when the overridden volumes are specified as **absolute paths** in the original `docker-compose.yml` file:
+The `mu-search-testing-framework` overrides the mounted volumes for the two databases (Elasticsearch and Virtuoso). For reasons that are unclear, this only works when the overridden volumes are specified as **absolute paths** in the original `docker-compose.yml` file, for example:
 
 ```
   database: 
@@ -97,7 +97,7 @@ database        /bin/bash /virtuoso.sh           Up      1111/tcp, 127.0.0.1:889
 elasticsearch   /usr/local/bin/docker-entr ...   Up      9200/tcp, 9300/tcp                
 ```
 
-These need to be killed directly through Docker:
+These cannot be killed by Compose, and need to be shut down directly through Docker:
 
 ```
 # docker kill database elasticsearch
@@ -166,7 +166,7 @@ test("Add data, check if updates applied", assert => {
 });
 ```
 
-Note that this example currently will only work if delta notifications to mu-search are correctly configured.
+Note that this last example will only work if delta notifications to mu-search are correctly configured.
 
 
 
